@@ -28,6 +28,19 @@ build:
     - docker login -u mabotn -p $DOCKER_REGISTRY_SECRET registry.gitlab.com
     - docker build -t registry.gitlab.com/devrecipe/$NAME:latest -t registry.gitlab.com/devrecipe/$NAME:$CI_COMMIT_SHA .
     - docker push registry.gitlab.com/devrecipe/$NAME
+    
+staging:
+  stage: deploy
+  environment:
+    name: staging
+    url: https://dev.devrecipe.com
+  script:
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_PRIVATE_KEY")
+    - mkdir -p ~/.ssh
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+    - ssh ubuntu@k8s.devrecipe.com "sudo deploy staging $NAME $CI_COMMIT_SHA dev.devrecipe.com"
 
 production:
   stage: deploy
